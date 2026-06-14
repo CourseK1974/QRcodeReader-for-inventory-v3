@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QRコード棚卸アプリ</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 24px;
+        }
+        
+        .section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+        
+        .section h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #555;
+        }
+        
+        #qr-reader {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        
+        #qr-reader video {
+            border-radius: 8px;
+        }
+        
+        /* QRコードスキャン枠のスタイル */
+        #qr-reader__scan_region {
+            border: 3px solid #007bff !important;
+        }
+        
+        .focus-hint {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .button {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        
+        .button-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .button-primary:hover {
+            background-color: #0056b3;
+        }
+        
+        .button-success {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .button-success:hover {
+            background-color: #218838;
+        }
+        
+        .button-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .button-danger:hover {
+            background-color: #c82333;
+        }
+        
+        .button-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .button-secondary:hover {
+            background-color: #5a6268;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+        
+        input[type="number"] {
+            -webkit-appearance: none;
+            -moz-appearance: textfield;
+        }
+        
+        .inventory-list {
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .inventory-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .inventory-item-info {
+            flex: 1;
+        }
+        
+        .inventory-item-code {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .inventory-item-qty {
+            color: #007bff;
+            font-weight: bold;
+        }
+        
+        .inventory-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .button-small {
+            padding: 6px 12px;
+            font-size: 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .button-edit {
+            background-color: #ffc107;
+            color: #000;
+        }
+        
+        .button-edit:hover {
+            background-color: #e0a800;
+        }
+        
+        .button-delete {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .button-delete:hover {
+            background-color: #c82333;
+        }
+        
+        .count-badge {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .status-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📦 QRコード棚卸アプリ</h1>
+        
+        <!-- QRコードスキャナー -->
+        <div class="section">
+            <h2>📷 QRコードスキャン</h2>
+            <div id="focus-hint" class="focus-hint hidden">👆 画面をタップするとピントを合わせ直します</div>
+            <div id="qr-reader" class="hidden"></div>
+            <button id="start-scan" class="button button-primary">カメラを起動</button>
+            <button id="stop-scan" class="button button-secondary hidden">スキャン停止</button>
+        </div>
+        
+        <!-- 手入力フォーム -->
+        <div class="section">
+            <h2>⌨️ 手入力</h2>
+            <div id="status-message" class="hidden"></div>
+            <div class="input-group">
+                <label for="product-code">商品コード</label>
+                <input type="text" id="product-code" placeholder="商品コードを入力">
+            </div>
+            <div class="input-group">
+                <label for="quantity">数量</label>
+                <input type="number" id="quantity" placeholder="数量を入力" min="1">
+            </div>
+            <button id="add-manual" class="button button-success">追加</button>
+        </div>
+        
+        <!-- 在庫リスト -->
+        <div class="section">
+            <h2>📋 入力済みデータ <span id="item-count" class="count-badge">0件</span></h2>
+            <div id="inventory-list" class="inventory-list"></div>
+        </div>
+        
+        <!-- アクション -->
+        <div class="section">
+            <button id="download-csv" class="button button-primary">CSVダウンロード</button>
+            <button id="clear-all" class="button button-danger">全データクリア</button>
+        </div>
+    </div>
+
+    <script>
+        // データ保存用（入力順を保持するため配列で管理）
+        let inventoryData = [];
+        
+        // QRコードスキャナー
+        let html5QrCode = null;
+        
+        // カメラ再起動中フラグ（連打防止）
+        let isRestarting = false;
+        
+        // カメラ設定（1か所にまとめる）
+        const cameraConfig = { facingMode: "environment" };
+        const scanConfig = {
+            fps: 3,
+            qrbox: 250
+        };
+        
+        // DOM要素
+        const qrReaderDiv = document.getElementById('qr-reader');
+        const focusHint = document.getElementById('focus-hint');
+        const startScanBtn = document.getElementById('start-scan');
+        const stopScanBtn = document.getElementById('stop-scan');
+        const productCodeInput = document.getElementById('product-code');
+        const quantityInput = document.getElementById('quantity');
+        const addManualBtn = document.getElementById('add-manual');
+        const inventoryList = document.getElementById('inventory-list');
+        const itemCount = document.getElementById('item-count');
+        const downloadCsvBtn = document.getElementById('download-csv');
+        const clearAllBtn = document.getElementById('clear-all');
+        const statusMessage = document.getElementById('status-message');
+        
+        // QRコード読み取り成功時の処理
+        function onScanSuccess(decodedText) {
+            // 商品コード欄に入力
+            productCodeInput.value = decodedText;
+            quantityInput.focus();
+            showStatus(`商品コード: ${decodedText} を読み取りました`, 'success');
+            
+            // スキャンを停止
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    showScanStoppedUI();
+                }).catch((err) => {
+                    console.error(err);
+                });
+            }
+        }
+        
+        // スキャン中のUI表示
+        function showScanningUI() {
+            qrReaderDiv.classList.remove('hidden');
+            focusHint.classList.remove('hidden');
+            startScanBtn.classList.add('hidden');
+            stopScanBtn.classList.remove('hidden');
+        }
+        
+        // スキャン停止時のUI表示
+        function showScanStoppedUI() {
+            qrReaderDiv.classList.add('hidden');
+            focusHint.classList.add('hidden');
+            startScanBtn.classList.remove('hidden');
+            stopScanBtn.classList.add('hidden');
+        }
+        
+        // スキャン開始処理（共通化）
+        function startScanning() {
+            return html5QrCode.start(
+                cameraConfig,
+                scanConfig,
+                onScanSuccess,
+                (errorMessage) => {
+                    // 読み取りエラーは無視（継続的にスキャン）
+                }
+            );
+        }
+        
+        // QRコードスキャン開始ボタン
+        startScanBtn.addEventListener('click', () => {
+            showScanningUI();
+            
+            html5QrCode = new Html5Qrcode("qr-reader");
+            
+            startScanning().catch((err) => {
+                showStatus('カメラの起動に失敗しました', 'error');
+                showScanStoppedUI();
+                console.error(err);
+            });
+        });
+        
+        // カメラ映像タップでカメラを再起動してAFを誘発
+        qrReaderDiv.addEventListener('click', () => {
+            // スキャン中でなければ何もしない
+            if (!html5QrCode || isRestarting) return;
+            
+            isRestarting = true;
+            
+            html5QrCode.stop().then(() => {
+                // 一瞬だけ間を置いてから再起動（カメラの解放を確実にする）
+                setTimeout(() => {
+                    startScanning().then(() => {
+                        isRestarting = false;
+                    }).catch((err) => {
+                        isRestarting = false;
+                        showStatus('カメラの再起動に失敗しました', 'error');
+                        showScanStoppedUI();
+                        console.error(err);
+                    });
+                }, 100);
+            }).catch((err) => {
+                isRestarting = false;
+                console.error(err);
+            });
+        });
+        
+        // QRコードスキャン停止ボタン
+        stopScanBtn.addEventListener('click', () => {
+            if (html5QrCode && !isRestarting) {
+                html5QrCode.stop().then(() => {
+                    showScanStoppedUI();
+                }).catch((err) => {
+                    console.error(err);
+                });
+            }
+        });
+        
+        // 手入力で追加
+        addManualBtn.addEventListener('click', () => {
+            const code = productCodeInput.value.trim();
+            const qty = parseInt(quantityInput.value);
+            
+            if (code === '') {
+                showStatus('商品コードを入力してください', 'error');
+                return;
+            }
+            
+            if (!quantityInput.value || qty < 1 || isNaN(qty)) {
+                showStatus('数量は1以上を入力してください', 'error');
+                return;
+            }
+            
+            addInventoryItem(code, qty);
+            showStatus(`商品コード: ${code} (数量: ${qty}) を追加しました`, 'success');
+            
+            // 入力フィールドをクリア
+            productCodeInput.value = '';
+            quantityInput.value = '';
+        });
+        
+        // 在庫データに追加（同じ商品コードは数量加算）
+        function addInventoryItem(code, qty) {
+            const existingItem = inventoryData.find(item => item.code === code);
+            if (existingItem) {
+                existingItem.qty += qty;
+            } else {
+                inventoryData.push({ code: code, qty: qty });
+            }
+            updateInventoryList();
+            
+            // ページを一番上にスクロール
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        // 在庫リスト表示を更新（最新のデータが上に表示される）
+        function updateInventoryList() {
+            inventoryList.innerHTML = '';
+            
+            // 逆順で表示（最新が上）
+            for (let i = inventoryData.length - 1; i >= 0; i--) {
+                const item = inventoryData[i];
+                const div = document.createElement('div');
+                div.className = 'inventory-item';
+                div.innerHTML = `
+                    <div class="inventory-item-info">
+                        <span class="inventory-item-code">${item.code}</span>
+                        <span class="inventory-item-qty"> - 数量: ${item.qty}</span>
+                    </div>
+                    <div class="inventory-item-actions">
+                        <button class="button-small button-edit" onclick="editItem(${i})">編集</button>
+                        <button class="button-small button-delete" onclick="deleteItem(${i})">削除</button>
+                    </div>
+                `;
+                inventoryList.appendChild(div);
+            }
+            
+            itemCount.textContent = `${inventoryData.length}件`;
+            
+            // リストを一番上にスクロール（最新データが見える）
+            inventoryList.scrollTop = 0;
+        }
+        
+        // ステータスメッセージ表示
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message status-${type}`;
+            statusMessage.classList.remove('hidden');
+            
+            setTimeout(() => {
+                statusMessage.classList.add('hidden');
+            }, 3000);
+        }
+        
+        // 編集機能
+        function editItem(index) {
+            const item = inventoryData[index];
+            const newQty = prompt(`商品コード: ${item.code}\n新しい数量を入力してください:`, item.qty);
+            
+            if (newQty === null) return; // キャンセル
+            
+            const qty = parseInt(newQty);
+            if (isNaN(qty) || qty < 1) {
+                showStatus('数量は1以上の数値を入力してください', 'error');
+                return;
+            }
+            
+            inventoryData[index].qty = qty;
+            updateInventoryList();
+            showStatus(`商品コード: ${item.code} の数量を ${qty} に変更しました`, 'success');
+        }
+        
+        // 削除機能
+        function deleteItem(index) {
+            const item = inventoryData[index];
+            if (confirm(`商品コード: ${item.code} を削除しますか？`)) {
+                inventoryData.splice(index, 1);
+                updateInventoryList();
+                showStatus(`商品コード: ${item.code} を削除しました`, 'success');
+            }
+        }
+        
+        // CSVダウンロード
+        downloadCsvBtn.addEventListener('click', () => {
+            if (inventoryData.length === 0) {
+                showStatus('ダウンロードするデータがありません', 'error');
+                return;
+            }
+            
+            // CSV生成（入力順で出力、BOM付きUTF-8でExcelが正しく認識できるように）
+            let csv = '商品コード,数量\n';
+            inventoryData.forEach(item => {
+                csv += `${item.code},${item.qty}\n`;
+            });
+            
+            // BOM（Byte Order Mark）を追加してExcelが正しくUTF-8として認識できるようにする
+            const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+            const csvBlob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const blob = new Blob([bom, csvBlob], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            const now = new Date();
+            const filename = `inventory_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}.csv`;
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showStatus('CSVファイルをダウンロードしました', 'success');
+        });
+        
+        // 全データクリア
+        clearAllBtn.addEventListener('click', () => {
+            if (inventoryData.length === 0) {
+                showStatus('クリアするデータがありません', 'error');
+                return;
+            }
+            
+            if (confirm('全てのデータを削除しますか？')) {
+                inventoryData = [];
+                updateInventoryList();
+                showStatus('全データをクリアしました', 'success');
+            }
+        });
+        
+        // 初期表示
+        updateInventoryList();
+    </script>
+</body>
+</html>
