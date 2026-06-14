@@ -1,0 +1,1 @@
+# QRcodeReader-for-inventory-v3
